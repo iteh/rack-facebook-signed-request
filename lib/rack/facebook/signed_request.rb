@@ -36,6 +36,12 @@ module Rack
           signed_params.each do |k,v|
             request.params['facebook'][k] = v
           end
+
+          # e.g. to use Rack::Cache for storing this request
+          request.params["facebook"]["original_method"] = env["REQUEST_METHOD"]
+          env["REQUEST_METHOD"] = 'GET' if @options[:post_to_get]
+          env.delete("HTTP_CACHE_CONTROL") if @options[:delete_facebook_cache_control]
+
         end
         @app.call(env)
       end
