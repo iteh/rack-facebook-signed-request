@@ -13,6 +13,12 @@ module Rack
         @app = app
         @condition = condition
         @options = options
+        @page_mapping = Hash.new
+        Site.all.each do |site|
+          @page_mapping[site.config["facebook_page_id"]] = "edmund.haselwanter.com" if site.config["facebook_page_id"]
+        end
+        # Release the connections back to the pool.
+        ActiveRecord::Base.clear_active_connections!
       end
 
       def secret
@@ -41,9 +47,15 @@ module Rack
           request.params["facebook"]["original_method"] = env["REQUEST_METHOD"]
           env["REQUEST_METHOD"] = 'GET' if @options[:post_to_get]
           env.delete("HTTP_CACHE_CONTROL") if @options[:delete_facebook_cache_control]
+          #use facebook host mapping
+          #env["rack.error"] =
+          host,port = env["HTTP_HOST"].split(':')
+          facebook_host = (signed_params["page"] && signed_params["page"]["id"]) ? @page_mapping[signed_params["page"]["id"]] : host
+          env["HTTP_HOST"] = [facebook_host,port].join(':')
 
         end
         @app.call(env)
+
       end
 
       private
